@@ -37,10 +37,22 @@ jobs:
     - name: Create key.properties for signing
       run: |
         cd simple_live_app/android
+        # Create debug keystore if it doesn't exist
+        if [ ! -f debug.keystore ]; then
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -storetype JKS
+        fi
         echo "keyAlias=androiddebugkey" > key.properties
         echo "keyPassword=android" >> key.properties
         echo "storeFile=debug.keystore" >> key.properties
         echo "storePassword=android" >> key.properties
+        
+    - name: Modify build.gradle.kts to use debug signing for release builds in CI
+      run: |
+        cd simple_live_app/android/app
+        # Backup the original file
+        cp build.gradle.kts build.gradle.kts.bak
+        # Replace the signingConfig line to fallback to debug if release config is not found
+        sed -i.backup 's/signingConfig = signingConfigs.getByName("release")/signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")/' build.gradle.kts
         
     - name: Build APK
       run: |
