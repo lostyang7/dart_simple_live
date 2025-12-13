@@ -34,6 +34,14 @@ jobs:
         cd ../simple_live_app
         flutter pub get
         
+    - name: Create key.properties for signing
+      run: |
+        cd simple_live_app/android
+        echo "keyAlias=androiddebugkey" > key.properties
+        echo "keyPassword=android" >> key.properties
+        echo "storeFile=debug.keystore" >> key.properties
+        echo "storePassword=android" >> key.properties
+        
     - name: Build APK
       run: |
         cd simple_live_app
