@@ -39,7 +39,7 @@ jobs:
         flutter build apk --release
         
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: release-apk
         path: simple_live_app/build/app/outputs/flutter-apk/app-release.apk
@@ -69,7 +69,7 @@ jobs:
         flutter build windows --release
         
     - name: Upload Windows Executable
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: release-windows
         path: simple_live_app/build/windows/x64/runner/Release/
@@ -81,7 +81,7 @@ jobs:
       shell: bash
       
     - name: Upload Windows ZIP
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: release-windows-zip
         path: simple_live_app/build/windows/x64/runner/Release/windows-release.zip
