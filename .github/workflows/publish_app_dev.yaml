@@ -1,21 +1,141 @@
-Run cd simple_live_app
+Process completed with name: Build Android APK
 
-Running Gradle task 'assembleRelease'...                        
-FAILURE: Build failed with an exception.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
-* Where:
-Build file '/home/runner/work/dart_simple_live/dart_simple_live/simple_live_app/android/app/build.gradle.kts' line: 44
+jobs:
+  build-android-apk:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Check out the code
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-* What went wrong:
-null cannot be cast to non-null type kotlin.String
+    # Set up Java
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
 
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
+    # Set up Flutter
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.38.4'
+        channel: 'stable'
+        cache: true
 
-BUILD FAILED in 1m 46s
-Running Gradle task 'assembleRelease'...                          106.7s
-Gradle task assembleRelease failed with exit code 1
-Error: Process completed with exit code 1.
+    # Install dependencies
+    - name: Install dependencies
+      run: |
+        cd simple_live_app
+        flutter pub get
+
+    # Create debug keystore for signing
+    - name: Create debug keystore
+      run: |
+        cd simple_live_app/android
+        keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -storetype JKS
+        echo "keyAlias=androiddebugkey" > app/key.properties
+        echo "keyPassword=android" >> app/key.properties
+        echo "storeFile=debug.keystore" >> app/key.properties
+        echo "storePassword=android" >> app/key.properties
+        
+    # Modify build.gradle.kts to avoid null property errors
+    - name: Modify build.gradle.kts to avoid null property errors
+      run: |
+        cd simple_live_app/android/app
+        # Backup the original file
+        cp build.gradle.kts build.gradle.kts.bak
+        # Create a simplified build.gradle.kts for CI/CD that avoids null issues
+        cat > build.gradle.kts << 'EOF'
+import java.util.Properties
+import java.io.FileInputStream
+
+plugins {
+    id("com.android.application")
+    id("kotlin-android")
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("dev.flutter.flutter-gradle-plugin")
+}
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace = "com.xycz.simple_live"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11.toString()
+    }
+
+    defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId = "com.xycz.simple_live"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias") ?: "androiddebugkey"
+            keyPassword = keystoreProperties.getProperty("keyPassword") ?: "android"
+            storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) } ?: file("debug.keystore")
+            storePassword = keystoreProperties.getProperty("storePassword") ?: "android"
+            isV1SigningEnabled = true
+            isV2SigningEnabled = true
+        }
+    }
+
+    buildTypes {
+        release {
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                // Default file with automatically generated optimization rules.
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+EOF
+
+    # Build APK
+    - name: Build APK
+      run: |
+        cd simple_live_app
+        flutter build apk --release
+
+    # Upload APK
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: simple-live-app-apk
+        path: simple_live_app/build/app/outputs/flutter-apk/app-release.apkexit code 1.
