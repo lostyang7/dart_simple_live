@@ -1,4 +1,4 @@
-name: app-build-tv
+name: app-build-action
 #推送Tag时触发
 on:
     push:
@@ -18,8 +18,6 @@ jobs:
         steps:
             #签出代码
             - uses: actions/checkout@v4
-              with:
-                  ref: ${{ github.event.inputs.branch || 'dev' }}
 
             #APK签名设置
             - name: Download Android keystore
