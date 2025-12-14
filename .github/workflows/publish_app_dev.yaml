@@ -41,11 +41,11 @@ jobs:
     - name: Create debug keystore
       run: |
         cd simple_live_app/android
-        keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -storetype JKS
-        echo "keyAlias=androiddebugkey" > key.properties
-        echo "keyPassword=android" >> key.properties
-        echo "storeFile=debug.keystore" >> key.properties
-        echo "storePassword=android" >> key.properties
+        keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -storetype JKS
+        echo "keyAlias=androiddebugkey" > app/key.properties
+        echo "keyPassword=android" >> app/key.properties
+        echo "storeFile=debug.keystore" >> app/key.properties
+        echo "storePassword=android" >> app/key.properties
         
     # Modify build.gradle.kts to use debug signing for release builds in CI
     - name: Modify build.gradle.kts to use debug signing for release builds in CI
