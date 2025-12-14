@@ -47,14 +47,19 @@ jobs:
         echo "storeFile=debug.keystore" >> app/key.properties
         echo "storePassword=android" >> app/key.properties
         
-    # Modify build.gradle.kts to use debug signing for release builds in CI
-    - name: Modify build.gradle.kts to use debug signing for release builds in CI
+    # Modify build.gradle.kts to avoid null property errors
+    - name: Modify build.gradle.kts to avoid null property errors
       run: |
         cd simple_live_app/android/app
         # Backup the original file
         cp build.gradle.kts build.gradle.kts.bak
-        # Replace the signingConfig line to fallback to debug if release config is not found
-        sed -i.backup 's/signingConfig = signingConfigs.getByName("release")/signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")/' build.gradle.kts
+        # Replace the signing config lines to provide default values
+        sed -i.backup 's/keyAlias = keystoreProperties.getProperty("keyAlias")/keyAlias = keystoreProperties.getProperty("keyAlias") ?: "androiddebugkey"/' build.gradle.kts
+        sed -i.backup 's/keyPassword = keystoreProperties.getProperty("keyPassword")/keyPassword = keystoreProperties.getProperty("keyPassword") ?: "android"/' build.gradle.kts
+        sed -i.backup 's/storePassword = keystoreProperties.getProperty("storePassword")/storePassword = keystoreProperties.getProperty("storePassword") ?: "android"/' build.gradle.kts
+        sed -i.backup 's/storeFile = keystoreProperties.getProperty("storeFile").let { file(it) }/storeFile = keystoreProperties.getProperty("storeFile").let { file(it) } ?: file("debug.keystore")/' build.gradle.kts
+        # Also ensure release signing falls back to debug if not configured
+        sed -i.backup 's/signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")//' build.gradle.kts
 
     # Build APK
     - name: Build APK
