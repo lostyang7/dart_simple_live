@@ -1,4 +1,4 @@
-name: Build Flutter App
+name: Build Android APK
 
 on:
   push:
@@ -8,102 +8,50 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-android:
+  build-android-apk:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
-    
+    # Check out the code
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Set up Java
     - name: Set up JDK 17
       uses: actions/setup-java@v3
       with:
         java-version: '17'
         distribution: 'temurin'
-    
+
+    # Set up Flutter
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.38.4'
         channel: 'stable'
         cache: true
-        
+
+    # Install dependencies
     - name: Install dependencies
       run: |
-        cd simple_live_core
+        cd simple_live_app
         flutter pub get
-        cd ../simple_live_app
-        flutter pub get
-        
-    - name: Create key.properties for signing
+
+    # Create debug keystore for signing
+    - name: Create debug keystore
       run: |
         cd simple_live_app/android
-        # Create debug keystore if it doesn't exist
-        if [ ! -f debug.keystore ]; then
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -storetype JKS
-        fi
-        echo "keyAlias=androiddebugkey" > key.properties
-        echo "keyPassword=android" >> key.properties
-        echo "storeFile=debug.keystore" >> key.properties
-        echo "storePassword=android" >> key.properties
-        
-    - name: Modify build.gradle.kts to use debug signing for release builds in CI
-      run: |
-        cd simple_live_app/android/app
-        # Backup the original file
-        cp build.gradle.kts build.gradle.kts.bak
-        # Replace the signingConfig line to fallback to debug if release config is not found
-        sed -i.backup 's/signingConfig = signingConfigs.getByName("release")/signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")/' build.gradle.kts
-        
+        keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -storetype JKS
+
+    # Build APK
     - name: Build APK
       run: |
         cd simple_live_app
         flutter build apk --release
-        
+
+    # Upload APK
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: release-apk
+        name: simple-live-app-apk
         path: simple_live_app/build/app/outputs/flutter-apk/app-release.apk
-        
-  build-windows:
-    runs-on: windows-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.38.4'
-        channel: 'stable'
-        cache: true
-        
-    - name: Install dependencies
-      run: |
-        cd simple_live_core
-        flutter pub get
-        cd ../simple_live_app
-        flutter pub get
-        
-    - name: Build Windows
-      run: |
-        cd simple_live_app
-        flutter build windows --release
-        
-    - name: Upload Windows Executable
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-windows
-        path: simple_live_app/build/windows/x64/runner/Release/
-        
-    - name: Create Windows ZIP Archive
-      run: |
-        cd simple_live_app/build/windows/x64/runner/Release/
-        Compress-Archive -Path * -DestinationPath windows-release.zip
-      shell: pwsh
-      
-    - name: Upload Windows ZIP
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-windows-zip
-        path: simple_live_app/build/windows/x64/runner/Release/windows-release.zip
