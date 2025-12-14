@@ -138,4 +138,4 @@ EOF
       uses: actions/upload-artifact@v4
       with:
         name: simple-live-app-apk
-        path: simple_live_app/build/app/outputs/flutter-apk/app-release.apkexit code 1.
+        path: simple_live_app/build/app/outputs/flutter-apk/app-release.apk
